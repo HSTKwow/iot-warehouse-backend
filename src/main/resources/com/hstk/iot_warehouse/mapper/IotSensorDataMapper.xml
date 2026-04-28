@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hstk.iot_warehouse.mapper.IotSensorDataMapper">
+    <resultMap id="BaseResultMap" type="com.hstk.iot_warehouse.model.entity.IotSensorData">
+        <id column="data_id" property="dataId" />
+        <result column="device_id" property="deviceId" />
+        <result column="temperature" property="temperature" />
+        <result column="humidity" property="humidity" />
+        <result column="pressure" property="pressure" />
+        <result column="smoke_density" property="smokeDensity" />
+        <result column="dew_point" property="dewPoint" />
+        <result column="luminance" property="luminance" />
+        <result column="extra_info" property="extraInfo" />
+        <result column="report_time" property="reportTime" />
+    </resultMap>
+
+    <!-- 插入传感器数据 -->
+    <insert id="insert" parameterType="com.hstk.iot_warehouse.model.entity.IotSensorData" useGeneratedKeys="true" keyProperty="dataId">
+        INSERT INTO iot_sensor_data(device_id, temperature, humidity, pressure, smoke_density, dew_point, luminance, extra_info, report_time)
+        VALUES (#{deviceId}, #{temperature}, #{humidity}, #{pressure}, #{smokeDensity}, #{dewPoint}, #{luminance}, #{extraInfo}, #{reportTime})
+    </insert>
+
+    <!-- 更新传感器数据 -->
+    <update id="update" parameterType="com.hstk.iot_warehouse.model.entity.IotSensorData">
+        UPDATE iot_sensor_data
+        <set>
+            <if test="temperature != null">temperature = #{temperature},</if>
+            <if test="humidity != null">humidity = #{humidity},</if>
+            <if test="pressure != null">pressure = #{pressure},</if>
+            <if test="smokeDensity != null">smoke_density = #{smokeDensity},</if>
+            <if test="dewPoint != null">dew_point = #{dewPoint},</if>
+            <if test="luminance != null">luminance = #{luminance},</if>
+            <if test="extraInfo != null">extra_info = #{extraInfo},</if>
+        </set>
+        WHERE data_id = #{dataId}
+    </update>
+
+    <!-- 删除传感器数据 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM iot_sensor_data WHERE data_id = #{dataId}
+    </delete>
+
+    <!-- 按ID查询 -->
+    <select id="selectById" resultMap="BaseResultMap" parameterType="long">
+        SELECT * FROM iot_sensor_data WHERE data_id = #{dataId}
+    </select>
+
+    <!-- 按设备ID查询 -->
+    <select id="selectByDeviceId" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM iot_sensor_data WHERE device_id = #{deviceId} ORDER BY report_time DESC
+    </select>
+
+    <!-- 按时间范围查询 -->
+    <select id="selectByDeviceIdAndTimeRange" resultMap="BaseResultMap">
+        SELECT * FROM iot_sensor_data 
+        WHERE device_id = #{deviceId} 
+        AND report_time BETWEEN #{from} AND #{to} 
+        ORDER BY report_time ASC
+    </select>
+
+    <!-- 获取最近N条数据 -->
+    <select id="selectRecentByDevice" resultMap="BaseResultMap">
+        SELECT * FROM iot_sensor_data 
+        WHERE device_id = #{deviceId} 
+        ORDER BY report_time DESC 
+        LIMIT #{limit}
+    </select>
+
+    <!-- 获取最新的一条数据 -->
+    <select id="selectLatestByDevice" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM iot_sensor_data 
+        WHERE device_id = #{deviceId} 
+        ORDER BY report_time DESC 
+        LIMIT 1
+    </select>
+
+    <!-- 删除旧数据 -->
+    <delete id="deleteOldData">
+        DELETE FROM iot_sensor_data WHERE report_time &lt; DATE_SUB(NOW(), INTERVAL 30 DAY)
+    </delete>
+</mapper>

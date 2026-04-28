@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hstk.iot_warehouse.mapper.WmsStockItemMapper">
+    <resultMap id="BaseResultMap" type="com.hstk.iot_warehouse.model.entity.WmsStockItem">
+        <id column="item_id" property="itemId" />
+        <result column="rfid_tag" property="rfidTag" />
+        <result column="material_id" property="materialId" />
+        <result column="quantity" property="quantity" />
+        <result column="batch_no" property="batchNo" />
+        <result column="expiry_date" property="expiryDate" />
+        <result column="location" property="location" />
+        <result column="status" property="status" />
+        <result column="in_time" property="inTime" />
+    </resultMap>
+
+    <resultMap id="VoResultMap" type="com.hstk.iot_warehouse.model.vo.WmsStockItemVO" extends="BaseResultMap">
+        <result column="material_name" property="materialName" />
+        <result column="material_code" property="materialCode" />
+        <result column="unit" property="unit" />
+        <result column="spec" property="spec" />
+        <result column="category_name" property="categoryName" />
+        <result column="location_name" property="locationName" />
+        <result column="zone_name" property="zoneName" />
+    </resultMap>
+
+    <select id="selectAllWithMaterial" resultMap="VoResultMap">
+        SELECT 
+            s.*, 
+            m.name as material_name, 
+            m.material_code,
+            m.unit,
+            m.spec,
+            c.category_name as category_name,
+            l.name as location_name,
+            z.name as zone_name
+        FROM wms_stock_item s
+        LEFT JOIN wms_material m ON s.material_id = m.material_id
+        LEFT JOIN wms_category c ON m.category_id = c.category_id
+        LEFT JOIN wms_location l ON s.location = l.id
+        LEFT JOIN wms_location z ON l.parent_id = z.id
+        ORDER BY s.expiry_date ASC
+    </select>
+
+    <insert id="insert" parameterType="com.hstk.iot_warehouse.model.entity.WmsStockItem" useGeneratedKeys="true" keyProperty="itemId">
+        INSERT INTO wms_stock_item (rfid_tag, material_id, quantity, batch_no, expiry_date, location, status, in_time)
+        VALUES (#{rfidTag}, #{materialId}, #{quantity}, #{batchNo}, #{expiryDate}, #{location}, #{status}, #{inTime})
+    </insert>
+
+    <update id="update" parameterType="com.hstk.iot_warehouse.model.entity.WmsStockItem">
+        UPDATE wms_stock_item
+        <set>
+            <if test="materialId != null">material_id = #{materialId},</if>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="batchNo != null">batch_no = #{batchNo},</if>
+            <if test="expiryDate != null">expiry_date = #{expiryDate},</if>
+            <if test="location != null">location = #{location},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="inTime != null">in_time = #{inTime},</if>
+        </set>
+        WHERE item_id = #{itemId}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM wms_stock_item WHERE item_id = #{itemId}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap" parameterType="long">
+        SELECT * FROM wms_stock_item WHERE item_id = #{itemId}
+    </select>
+
+    <select id="selectByRfid" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM wms_stock_item WHERE rfid_tag = #{rfidTag}
+    </select>
+
+    <select id="selectByMaterialId" resultMap="VoResultMap" parameterType="long">
+        SELECT 
+            s.*,
+            l.name as location_name,
+            z.name as zone_name,
+            m.name as material_name  
+        FROM wms_stock_item s
+        LEFT JOIN wms_location l ON s.location = l.id
+        LEFT JOIN wms_location z ON l.parent_id = z.id
+        LEFT JOIN wms_material m ON s.material_id = m.material_id
+        WHERE s.material_id = #{materialId} AND s.status = 1 
+        ORDER BY s.expiry_date ASC
+    </select>
+
+    <select id="selectExpiringBefore" resultMap="BaseResultMap" parameterType="java.time.LocalDate">
+        SELECT * FROM wms_stock_item WHERE expiry_date &lt;= #{date} ORDER BY expiry_date ASC
+    </select>
+
+    <!-- 查询在库库存 -->
+    <select id="selectInStock" resultMap="BaseResultMap">
+        SELECT * FROM wms_stock_item WHERE status = 1 ORDER BY expiry_date ASC
+    </select>
+
+    <!-- 查询已过期物资 -->
+    <select id="selectExpired" resultMap="BaseResultMap">
+        SELECT * FROM wms_stock_item WHERE status = 4 OR (expiry_date &lt; CURDATE() AND status != 2)
+    </select>
+
+    <!-- 查询即将过期物资 -->
+    <select id="selectAboutToExpire" resultMap="BaseResultMap">
+        SELECT * FROM wms_stock_item 
+        WHERE status = 1 
+        AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) 
+        ORDER BY expiry_date ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAboutToExpire" resultType="long">
+        SELECT COUNT(*) FROM wms_stock_item 
+        WHERE status = 1 
+        AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) 
+    </select>
+
+    <!-- 按库位查询 -->
+    <select id="selectByLocation" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM wms_stock_item WHERE location = #{location} AND status = 1 ORDER BY expiry_date ASC
+    </select>
+
+    <!-- 更新库存状态 -->
+    <update id="updateStatus">
+        UPDATE wms_stock_item SET status = #{status} WHERE item_id = #{itemId}
+    </update>
+
+    <!-- 按RFID更新状态 -->
+    <update id="updateStatusByRfid">
+        UPDATE wms_stock_item SET status = #{status} WHERE rfid_tag = #{rfidTag}
+    </update>
+
+    <!-- 统计批量物资是否有库存 (status=1) -->
+    <select id="countByMaterialIds" resultType="int">
+        SELECT COUNT(*) FROM wms_stock_item 
+        WHERE status = 1 
+        AND material_id IN
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- 库存概览统计 -->
+    <select id="selectStockSummary" resultType="com.hstk.iot_warehouse.model.dto.StockSummaryDTO">
+        SELECT 
+            m.material_id as materialId, 
+            m.name as materialName, 
+            c.category_name as categoryName,
+            m.min_stock as minStock, 
+            m.max_stock as maxStock, 
+            m.unit as unit,
+            m.image_url as imageUrl,
+            COALESCE(SUM(s.quantity), 0) as quantity,
+            MIN(s.expiry_date) as nearestExpiryDate
+        FROM wms_material m
+        LEFT JOIN wms_category c ON m.category_id = c.category_id
+        LEFT JOIN wms_stock_item s ON m.material_id = s.material_id AND s.status = 1
+        GROUP BY m.material_id, m.name, c.category_name, m.min_stock, m.max_stock, m.unit, m.image_url
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countStockSummary" resultType="long">
+        SELECT COUNT(*) FROM wms_material
+    </select>
+
+    <!-- 统计低库存物资数 -->
+    <select id="countLowStock" resultType="int">
+        SELECT COUNT(*) FROM (
+            SELECT m.material_id
+            FROM wms_material m
+            LEFT JOIN wms_stock_item s ON m.material_id = s.material_id AND s.status = 1
+            GROUP BY m.material_id, m.min_stock
+            HAVING COALESCE(SUM(s.quantity), 0) &lt;= COALESCE(m.min_stock, 0)
+        ) AS low_stock_items
+    </select>
+
+    <!-- 统计积压物资数 -->
+    <select id="countOverStock" resultType="int">
+        SELECT COUNT(*) FROM (
+            SELECT m.material_id
+            FROM wms_material m
+            LEFT JOIN wms_stock_item s ON m.material_id = s.material_id AND s.status = 1
+            GROUP BY m.material_id, m.max_stock
+            HAVING COALESCE(SUM(s.quantity), 0) > m.max_stock
+        ) AS over_stock_items
+    </select>
+
+    <!-- 统计所有在库库存总量 -->
+    <select id="sumTotalQuantity" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(quantity), 0) FROM wms_stock_item WHERE status = 1
+    </select>
+
+    <!-- 查询某物资的当前库存量与预警阈值 -->
+    <select id="selectStockLevelByMaterialId" resultType="java.util.HashMap">
+        SELECT
+            m.name AS materialName,
+            m.min_stock AS minStock,
+            m.unit AS unit,
+            COALESCE(SUM(s.quantity), 0) AS currentStock
+        FROM wms_material m
+        LEFT JOIN wms_stock_item s ON m.material_id = s.material_id AND s.status = 1
+        WHERE m.material_id = #{materialId}
+        GROUP BY m.material_id, m.name, m.min_stock, m.unit
+    </select>
+
+    <!-- 查询所有库存不足的物资 -->
+    <select id="selectLowStockMaterials" resultType="java.util.HashMap">
+        SELECT
+            m.material_id AS materialId,
+            m.name AS materialName,
+            m.min_stock AS minStock,
+            m.unit AS unit,
+            COALESCE(SUM(s.quantity), 0) AS currentStock
+        FROM wms_material m
+        LEFT JOIN wms_stock_item s ON m.material_id = s.material_id AND s.status = 1
+        WHERE m.min_stock IS NOT NULL AND m.min_stock > 0
+        GROUP BY m.material_id, m.name, m.min_stock, m.unit
+        HAVING currentStock &lt; m.min_stock
+    </select>
+
+    <!-- 查询所有库存积压的物资 -->
+    <select id="selectOverStockMaterials" resultType="java.util.HashMap">
+        SELECT
+            m.material_id AS materialId,
+            m.name AS materialName,
+            m.max_stock AS maxStock,
+            m.unit AS unit,
+            COALESCE(SUM(s.quantity), 0) AS currentStock
+        FROM wms_material m
+        LEFT JOIN wms_stock_item s ON m.material_id = s.material_id AND s.status = 1
+        WHERE m.max_stock IS NOT NULL AND m.max_stock > 0
+        GROUP BY m.material_id, m.name, m.max_stock, m.unit
+        HAVING currentStock &gt; m.max_stock
+    </select>
+    <!-- 查询指定物资最新待入库记录（status=0） -->
+    <select id="selectLatestPendingByMaterialId" resultMap="BaseResultMap" parameterType="long">
+        SELECT * FROM wms_stock_item
+        WHERE material_id = #{materialId} AND status = 0
+        ORDER BY in_time DESC
+        LIMIT 1
+    </select>
+</mapper>

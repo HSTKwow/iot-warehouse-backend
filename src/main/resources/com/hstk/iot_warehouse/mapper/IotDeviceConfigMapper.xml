@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hstk.iot_warehouse.mapper.IotDeviceConfigMapper">
+    <resultMap id="BaseResultMap" type="com.hstk.iot_warehouse.model.entity.IotDeviceConfig">
+        <id column="config_id" property="configId" />
+        <result column="device_id" property="deviceId" />
+        <result column="temp_max" property="tempMax" />
+        <result column="temp_min" property="tempMin" />
+        <result column="humidity_max" property="humidityMax" />
+        <result column="smoke_threshold" property="smokeThreshold" />
+        <result column="pressure_max" property="pressureMax" />
+        <result column="dew_point_max" property="dewPointMax" />
+        <result column="lux_max" property="luxMax" />
+        <result column="work_mode" property="workMode" />
+        <result column="alarm_mode" property="alarmMode" />
+    </resultMap>
+
+    <insert id="insert" parameterType="com.hstk.iot_warehouse.model.entity.IotDeviceConfig" useGeneratedKeys="true" keyProperty="configId">
+        INSERT INTO iot_device_config (device_id, temp_max, temp_min, humidity_max, smoke_threshold, pressure_max, dew_point_max, lux_max, work_mode, alarm_mode)
+        VALUES (#{deviceId}, #{tempMax}, #{tempMin}, #{humidityMax}, #{smokeThreshold}, #{pressureMax}, #{dewPointMax}, #{luxMax}, #{workMode}, #{alarmMode})
+    </insert>
+
+    <update id="update" parameterType="com.hstk.iot_warehouse.model.entity.IotDeviceConfig">
+        UPDATE iot_device_config
+        <set>
+            <if test="deviceId != null">device_id = #{deviceId},</if>
+            <if test="tempMax != null">temp_max = #{tempMax},</if>
+            <if test="tempMin != null">temp_min = #{tempMin},</if>
+            <if test="humidityMax != null">humidity_max = #{humidityMax},</if>
+            <if test="smokeThreshold != null">smoke_threshold = #{smokeThreshold},</if>
+            <if test="pressureMax != null">pressure_max = #{pressureMax},</if>
+            <if test="dewPointMax != null">dew_point_max = #{dewPointMax},</if>
+            <if test="luxMax != null">lux_max = #{luxMax},</if>
+            <if test="workMode != null">work_mode = #{workMode},</if>
+            <if test="alarmMode != null">alarm_mode = #{alarmMode},</if>
+        </set>
+        WHERE config_id = #{configId}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM iot_device_config WHERE config_id = #{configId}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap" parameterType="long">
+        SELECT * FROM iot_device_config WHERE config_id = #{configId}
+    </select>
+
+    <select id="selectByDeviceId" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM iot_device_config WHERE device_id = #{deviceId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM iot_device_config
+    </select>
+</mapper>

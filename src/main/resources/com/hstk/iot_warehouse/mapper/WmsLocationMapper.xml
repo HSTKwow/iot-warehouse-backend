@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hstk.iot_warehouse.mapper.WmsLocationMapper">
+
+    <insert id="insert">
+        INSERT INTO wms_location (id, name, parent_id, level, sort_order)
+        VALUES (#{id}, #{name}, #{parentId}, #{level}, #{sortOrder})
+    </insert>
+
+    <update id="update">
+        UPDATE wms_location
+        SET name = #{name},
+            parent_id = #{parentId},
+            level = #{level},
+            sort_order = #{sortOrder}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM wms_location WHERE id = #{id}
+    </delete>
+
+    <select id="selectAll" resultType="com.hstk.iot_warehouse.model.entity.WmsLocation">
+        SELECT * FROM wms_location ORDER BY sort_order ASC, id ASC
+    </select>
+    
+</mapper>

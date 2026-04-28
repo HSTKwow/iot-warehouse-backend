@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: warehouse
+  config:
+    import: optional:file:../local-secrets.properties
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://localhost:3306/iot_warehouse?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  servlet:
+    #文件上传配置
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+mybatis:
+  configuration:
+    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+
+mqtt:
+  broker:
+    url: tcp://broker.emqx.io:1883
+  client:
+    # Use shorter random ID to avoid length limits (usually 23 chars for old brokers)
+    id: backend_${random.int[1000,9999]}
+  topic:
+    data: device/+/data
+
+sensor:
+  # 传感器数值变化不明显时，最小持久化间隔（毫秒）
+  persist-min-interval-ms: 2000
+
+aliyun:
+  oss:
+    endpoint: ${OSS_ENDPOINT:https://oss-cn-beijing.aliyuncs.com}
+    accessKeyId: ${OSS_ACCESS_KEY_ID:}
+    accessKeySecret: ${OSS_ACCESS_KEY_SECRET:}
+    bucketName: ${OSS_BUCKET_NAME:iot-warehouse}

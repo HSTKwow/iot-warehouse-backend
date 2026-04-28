@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hstk.iot_warehouse.mapper.WmsMaterialMapper">
+    <resultMap id="BaseResultMap" type="com.hstk.iot_warehouse.model.entity.WmsMaterial">
+        <id column="material_id" property="materialId" />
+        <result column="material_code" property="materialCode" />
+        <result column="name" property="name" />
+        <result column="category_id" property="categoryId" />
+        <result column="unit" property="unit" />
+        <result column="spec" property="spec" />
+        <result column="expiry_warning_days" property="expiryWarningDays" />
+        <result column="min_stock" property="minStock" />
+        <result column="max_stock" property="maxStock" />
+        <result column="image_url" property="imageUrl" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <resultMap id="VoResultMap" type="com.hstk.iot_warehouse.model.vo.WmsMaterialVO" extends="BaseResultMap">
+        <result column="current_stock" property="currentStock" />
+        <result column="category_name" property="categoryName" />
+    </resultMap>
+
+    <insert id="insert" parameterType="com.hstk.iot_warehouse.model.entity.WmsMaterial" useGeneratedKeys="true" keyProperty="materialId">
+        INSERT INTO wms_material (material_code, name, category_id, unit, spec, expiry_warning_days, min_stock, max_stock, image_url, create_time, update_time)
+        VALUES (#{materialCode}, #{name}, #{categoryId}, #{unit}, #{spec}, #{expiryWarningDays}, #{minStock}, #{maxStock}, #{imageUrl}, #{createTime}, #{updateTime})
+    </insert>
+
+    <update id="update" parameterType="com.hstk.iot_warehouse.model.entity.WmsMaterial">
+        UPDATE wms_material
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="unit != null">unit = #{unit},</if>
+            <if test="spec != null">spec = #{spec},</if>
+            <if test="expiryWarningDays != null">expiry_warning_days = #{expiryWarningDays},</if>
+            <if test="minStock != null">min_stock = #{minStock},</if>
+            <if test="maxStock != null">max_stock = #{maxStock},</if>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </set>
+        WHERE material_id = #{materialId}
+    </update>
+
+    <!--批量删除物资-->
+    <delete id="deleteByIds">
+        DELETE FROM wms_material WHERE material_id IN
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="selectById" resultMap="VoResultMap" parameterType="long">
+        SELECT m.*, c.category_name, (SELECT COALESCE(SUM(s.quantity), 0) FROM wms_stock_item s WHERE s.material_id = m.material_id AND s.status = 1) as current_stock 
+        FROM wms_material m 
+        LEFT JOIN wms_category c ON m.category_id = c.category_id
+        WHERE m.material_id = #{materialId}
+    </select>
+
+    <select id="count" resultType="long">
+        select count(*) from wms_material m
+        <where>
+            <if test="categoryId != null">
+                AND m.category_id = #{categoryId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND m.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+    </select>
+
+    <!-- 分页查询 -->
+    <select id="selectByPage" resultMap="VoResultMap">
+        SELECT m.*, c.category_name, (SELECT COALESCE(SUM(s.quantity), 0) FROM wms_stock_item s WHERE s.material_id = m.material_id AND s.status = 1) as current_stock 
+        FROM wms_material m
+        LEFT JOIN wms_category c ON m.category_id = c.category_id
+        <where>
+            <if test="categoryId != null">
+                AND m.category_id = #{categoryId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND m.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY m.create_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+
+    <select id="selectByCode" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM wms_material WHERE material_code = #{materialCode}
+    </select>
+
+</mapper>

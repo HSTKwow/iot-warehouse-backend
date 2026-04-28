@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hstk.iot_warehouse.mapper.WmsCategoryMapper">
+    <resultMap id="BaseResultMap" type="com.hstk.iot_warehouse.model.entity.WmsCategory">
+        <id column="category_id" property="categoryId" />
+        <result column="category_name" property="categoryName" />
+        <result column="description" property="description" />
+    </resultMap>
+
+    <insert id="insert" parameterType="com.hstk.iot_warehouse.model.entity.WmsCategory" useGeneratedKeys="true" keyProperty="categoryId">
+        INSERT INTO wms_category (category_name, description)
+        VALUES (#{categoryName}, #{description})
+    </insert>
+
+    <update id="update" parameterType="com.hstk.iot_warehouse.model.entity.WmsCategory">
+        UPDATE wms_category
+        <set>
+            <if test="categoryName != null">category_name = #{categoryName},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE category_id = #{categoryId}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM wms_category WHERE category_id = #{categoryId}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap" parameterType="long">
+        SELECT * FROM wms_category WHERE category_id = #{categoryId}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM wms_category ORDER BY category_id
+    </select>
+</mapper>

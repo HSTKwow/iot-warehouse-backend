@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hstk.iot_warehouse.mapper.WmsIoRecordMapper">
+    <resultMap id="BaseResultMap" type="com.hstk.iot_warehouse.model.entity.WmsIoRecord">
+        <id column="record_id" property="recordId" />
+        <result column="rfid_tag" property="rfidTag" />
+        <result column="io_type" property="ioType" />
+        <result column="order_no" property="orderNo" />
+        <result column="device_id" property="deviceId" />
+        <result column="time" property="time" />
+    </resultMap>
+
+    <resultMap id="VoResultMap" type="com.hstk.iot_warehouse.model.vo.WmsIoRecordVO" extends="BaseResultMap">
+        <result column="material_name" property="materialName" />
+        <result column="material_code" property="materialCode" />
+        <result column="quantity" property="quantity" />
+        <result column="location" property="location" />
+        <result column="location_name" property="locationName" />
+        <result column="zone_name" property="zoneName" />
+    </resultMap>
+
+    <select id="selectAllWithInfo" resultMap="VoResultMap">
+        SELECT 
+            r.*,
+            m.name as material_name,
+            m.material_code,
+            s.quantity,
+            s.location,
+            l.name as location_name,
+            z.name as zone_name
+        FROM wms_io_record r
+        LEFT JOIN wms_stock_item s ON r.rfid_tag = s.rfid_tag
+        LEFT JOIN wms_material m ON s.material_id = m.material_id
+        LEFT JOIN wms_location l ON s.location = l.id
+        LEFT JOIN wms_location z ON l.parent_id = z.id
+        ORDER BY r.time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM wms_io_record
+    </select>
+
+    <insert id="insert" parameterType="com.hstk.iot_warehouse.model.entity.WmsIoRecord" useGeneratedKeys="true" keyProperty="recordId">
+        INSERT INTO wms_io_record (rfid_tag, io_type, order_no, device_id, time)
+        VALUES (#{rfidTag}, #{ioType}, #{orderNo}, #{deviceId}, #{time})
+    </insert>
+
+    <update id="update" parameterType="com.hstk.iot_warehouse.model.entity.WmsIoRecord">
+        UPDATE wms_io_record
+        <set>
+            <if test="rfidTag != null">rfid_tag = #{rfidTag},</if>
+            <if test="ioType != null">io_type = #{ioType},</if>
+            <if test="orderNo != null">order_no = #{orderNo},</if>
+            <if test="deviceId != null">device_id = #{deviceId},</if>
+            <if test="time != null">time = #{time},</if>
+        </set>
+        WHERE record_id = #{recordId}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM wms_io_record WHERE record_id = #{recordId}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap" parameterType="long">
+        SELECT * FROM wms_io_record WHERE record_id = #{recordId}
+    </select>
+
+    <select id="selectByRfid" resultMap="BaseResultMap">
+        SELECT * FROM wms_io_record WHERE rfid_tag = #{rfidTag} ORDER BY time DESC LIMIT #{limit}
+    </select>
+
+    <!-- 按时间范围查询 -->
+    <select id="selectByTimeRange" resultMap="BaseResultMap">
+        SELECT * FROM wms_io_record WHERE time BETWEEN #{startTime} AND #{endTime} ORDER BY time DESC
+    </select>
+
+    <!-- 按IO类型查询 -->
+    <select id="selectByIOType" resultMap="BaseResultMap">
+        SELECT * FROM wms_io_record WHERE io_type = #{ioType} ORDER BY time DESC LIMIT #{limit}
+    </select>
+
+    <!-- 按单据号查询 -->
+    <select id="selectByOrderNo" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM wms_io_record WHERE order_no = #{orderNo} ORDER BY time DESC
+    </select>
+
+    <!-- 按设备查询 -->
+    <select id="selectByDevice" resultMap="BaseResultMap">
+        SELECT * FROM wms_io_record WHERE device_id = #{deviceId} ORDER BY time DESC LIMIT #{limit}
+    </select>
+
+    <!-- 查询最近的记录 -->
+    <select id="selectRecent" resultMap="BaseResultMap" parameterType="int">
+        SELECT * FROM wms_io_record ORDER BY time DESC LIMIT #{limit}
+    </select>
+
+    <select id="selectLatestByMaterialId" resultType="com.hstk.iot_warehouse.model.entity.WmsIoRecord">
+        SELECT r.* 
+        FROM wms_io_record r
+        JOIN wms_stock_item s ON r.rfid_tag = s.rfid_tag
+        WHERE s.material_id = #{materialId}
+        ORDER BY r.time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectIoTrendByMaterial" resultType="com.hstk.iot_warehouse.model.dto.IoTrendRowDTO">
+        SELECT
+            <choose>
+                <when test="groupType == 'month'">
+                    DATE_FORMAT(r.time, '%Y-%m')
+                </when>
+                <otherwise>
+                    DATE_FORMAT(r.time, '%Y-%m-%d')
+                </otherwise>
+            </choose> AS bucket,
+            r.io_type AS ioType,
+            COUNT(*) AS count
+        FROM wms_io_record r
+        JOIN wms_stock_item s ON r.rfid_tag = s.rfid_tag
+        WHERE s.material_id = #{materialId}
+          AND r.time >= #{startTime}
+          AND r.time &lt; #{endTime}
+        GROUP BY
+            <choose>
+                <when test="groupType == 'month'">
+                    DATE_FORMAT(r.time, '%Y-%m')
+                </when>
+                <otherwise>
+                    DATE_FORMAT(r.time, '%Y-%m-%d')
+                </otherwise>
+            </choose>,
+            r.io_type
+        ORDER BY bucket ASC
+    </select>
+</mapper>

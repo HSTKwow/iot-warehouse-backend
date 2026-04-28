@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hstk.iot_warehouse.mapper.IotAlarmMapper">
+    <resultMap id="BaseResultMap" type="com.hstk.iot_warehouse.model.entity.IotAlarm">
+        <id column="alarm_id" property="alarmId" />
+        <result column="device_id" property="deviceId"/>
+        <result column="alarm_type" property="alarmType"/>
+        <result column="severity" property="severity"/>
+        <result column="content" property="content"/>
+        <result column="status" property="status"/>
+        <result column="related_id" property="relatedId"/>
+        <result column="alarm_source" property="alarmSource"/>
+        <result column="create_time" property="createTime"/>
+        <result column="resolve_time" property="resolveTime"/>
+        <result column="resolve_remark" property="resolveRemark"/>
+        <result column="resolve_user" property="resolveUser"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.hstk.iot_warehouse.model.entity.IotAlarm" useGeneratedKeys="true" keyProperty="alarmId">
+        INSERT INTO iot_alarm (device_id, alarm_type, severity, content, status, related_id, alarm_source, create_time)
+        VALUES (#{deviceId}, #{alarmType}, #{severity}, #{content}, #{status}, #{relatedId}, #{alarmSource}, #{createTime})
+    </insert>
+
+    <update id="update" parameterType="com.hstk.iot_warehouse.model.entity.IotAlarm">
+        UPDATE iot_alarm
+        <set>
+            <if test="deviceId != null">device_id = #{deviceId},</if>
+            <if test="alarmType != null">alarm_type = #{alarmType},</if>
+            <if test="severity != null">severity = #{severity},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="relatedId != null">related_id = #{relatedId},</if>
+            <if test="alarmSource != null">alarm_source = #{alarmSource},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="resolveTime != null">resolve_time = #{resolveTime},</if>
+            <if test="resolveRemark != null">resolve_remark = #{resolveRemark},</if>
+            <if test="resolveUser != null">resolve_user = #{resolveUser},</if>
+        </set>
+        WHERE alarm_id = #{alarmId}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM iot_alarm WHERE alarm_id = #{alarmId}
+    </delete>
+
+    <select id="selectById" resultMap="BaseResultMap" parameterType="long">
+        SELECT * FROM iot_alarm WHERE alarm_id = #{alarmId}
+    </select>
+
+    <select id="selectByDeviceId" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM iot_alarm WHERE device_id = #{deviceId} ORDER BY create_time DESC
+    </select>
+
+    <select id="selectBySourceAndRelatedId" resultMap="BaseResultMap">
+        SELECT * FROM iot_alarm WHERE alarm_source = #{alarmSource} AND related_id = #{relatedId} ORDER BY create_time DESC
+    </select>
+
+    <select id="selectRecent" resultMap="BaseResultMap" parameterType="int">
+        SELECT * FROM iot_alarm ORDER BY create_time DESC LIMIT #{limit}
+    </select>
+
+    <!-- 按告警类型查询 -->
+    <select id="selectByAlarmType" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM iot_alarm WHERE alarm_type = #{alarmType} ORDER BY create_time DESC
+    </select>
+
+    <!-- 按告警来源查询 -->
+    <select id="selectByAlarmSource" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM iot_alarm WHERE alarm_source = #{alarmSource} ORDER BY create_time DESC
+    </select>
+
+    <!-- 按来源和状态查询(status为null时不过滤状态) -->
+    <select id="selectBySourceAndStatus" resultMap="BaseResultMap">
+        SELECT * FROM iot_alarm
+        WHERE alarm_source = #{alarmSource}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 更新告警状态(含处理备注) -->
+    <update id="updateStatus">
+        UPDATE iot_alarm SET status = #{status} WHERE alarm_id = #{alarmId}
+    </update>
+
+    <!-- 处理告警(含处理时间、备注和处理人) -->
+    <update id="resolveAlarm">
+        UPDATE iot_alarm
+        SET status = 1, resolve_time = #{resolveTime}, resolve_remark = #{resolveRemark}, resolve_user = #{resolveUser}
+        WHERE alarm_id = #{alarmId}
+    </update>
+
+    <!-- 查询高优先级告警 -->
+    <select id="selectHighPriorityAlarms" resultMap="BaseResultMap" parameterType="int">
+        SELECT * FROM iot_alarm WHERE severity &gt;= 2 AND status = 0 ORDER BY create_time DESC LIMIT #{limit}
+    </select>
+
+    <!-- 查询未处理的告警 -->
+    <select id="selectUnprocessed" resultMap="BaseResultMap">
+        SELECT * FROM iot_alarm WHERE status = 0 ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询设备的未处理告警 -->
+    <select id="selectUnprocessedByDeviceId" resultMap="BaseResultMap" parameterType="String">
+        SELECT * FROM iot_alarm WHERE device_id = #{deviceId} AND status = 0 ORDER BY create_time DESC
+    </select>
+
+    <!-- 按用户设备过滤查询最近告警(传感器告警按设备归属过滤 + 库存告警所有人可见) -->
+    <select id="selectRecentByUserId" resultMap="BaseResultMap">
+        SELECT a.* FROM iot_alarm a
+        JOIN iot_device_user du ON a.device_id = du.device_id
+        WHERE du.user_id = #{userId}
+        UNION
+        SELECT * FROM iot_alarm WHERE alarm_source = 'stock'
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+</mapper>
