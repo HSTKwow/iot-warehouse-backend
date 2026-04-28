@@ -30,7 +30,7 @@
 ```mermaid
 flowchart LR
     Device["ESP32-S3 设备端"] -->|MQTT: device/+/data| Backend["Spring Boot 后端"]
-    Backend -->|"MQTT: device/:deviceId/cmd"| Device
+    Backend -->|"MQTT: device/:MAC/cmd"| Device
     Web["Web 管理端"] -->|REST API| Backend
     Miniapp["微信小程序"] -->|REST API| Backend
     Backend --> MySQL[(MySQL)]
